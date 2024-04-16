@@ -16,8 +16,7 @@ cargo install --git https://github.com/mousecrusher2/minecraft-server-wrapper.gi
 以下のコマンドを実行してサーバーを起動します。
 
 ```sh
-minecraft-server-wrapper --server-path <サーバーのパス> --backup-folder <バックアップを保存するディレクトリのパス> --backup-interval <バックアップを取る間隔>
---backup-count <バックアップを保持する数>　-- <サーバーの起動オプション>
+minecraft-server-wrapper --server-path <サーバーのパス> --backup-folder <バックアップを保存するディレクトリのパス> --backup-interval <バックアップを取る間隔>　--backup-count <バックアップを保持する数>　-- <サーバーの起動オプション>
 ```
 
 `--server-path` はサーバーのパスを指定します。指定しなかったっ場合は`./bedrock_server`が使われます。  
