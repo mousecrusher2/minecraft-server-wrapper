@@ -9,3 +9,25 @@ description = "A simple wrapper for running a Minecraft bedrock server and backu
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+chrono = { version = "0.4.38", default-features = false, features = [
+    "alloc",
+    "clock",
+    "iana-time-zone",
+    "now",
+    "oldtime",
+    "std",
+    "winapi",
+    "windows-targets",
+] }
+clap = { version = "4.5.4", features = ["derive"] }
+humantime = "2.1.0"
+regex = "1.10.4"
+tokio = { version = "1.37.0", features = [
+    "macros",
+    "process",
+    "rt",
+    "io-std",
+    "io-util",
+    "fs",
+] }
+tokio-stream = { version = "0.1.15", features = ["fs", "io-util"] }
