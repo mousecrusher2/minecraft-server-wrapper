@@ -42,6 +42,8 @@ async fn main() {
         .spawn()
         .expect("Failed to start server");
 
+    // Wait for process to start
+    // If the server is too slow to start, fail to read from stdout
     time::sleep(time::Duration::from_secs(3)).await;
 
     if !cli.backup_folder.exists() {
@@ -137,6 +139,7 @@ async fn main() {
                         self_stdout.flush().await.expect("Failed to flush stdout");
                     }
                 } else if command_re.is_match(&line) {
+                    // save command is not allowed
                     self_stdout.write_all(b"Don't use \"save xxxx\" command").await.expect("Failed to write to stdout");
                     self_stdout.flush().await.expect("Failed to flush stdout");
                 } else {

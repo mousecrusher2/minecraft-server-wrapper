@@ -42,6 +42,7 @@ impl Backuper {
         })
     }
 
+    // Backup folder is like: ./backups/world_name/2021-08-01 12_34_56+0000
     pub(super) async fn backup(&self, file_paths: String) {
         let world_name = file_paths.split('/').next().unwrap();
         let origin_world_folder = self.origin_folder.join(world_name);
