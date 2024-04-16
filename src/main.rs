@@ -135,7 +135,7 @@ async fn main() {
                         self_stdout.flush().await.expect("Failed to flush stdout");
 
                     } else {
-                        self_stdout.write_all(b"Unknown command").await.expect("Failed to write to stdout");
+                        self_stdout.write_all(b"Unknown command\n").await.expect("Failed to write to stdout");
                         self_stdout.flush().await.expect("Failed to flush stdout");
                     }
                 } else if command_re.is_match(&line) {
