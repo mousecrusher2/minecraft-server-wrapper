@@ -101,75 +101,65 @@ async fn main() {
             }
 
             line = server_stdout.next_line() => {
-                if let Some(line) = line.expect("Failed to read from server stdout") {
-                    self_stdout.writeln_flush(line.as_bytes()).await.expect("Failed to write to stdout");
+                if let Some(line) = line.unwrap() {
+                    self_stdout.writeln_flush(line.as_bytes()).await.unwrap();
                 }
             }
 
             line = self_stdin.next_line() => {
-                let line = line
-                    .expect("Failed to read from stdin")
-                    .expect("stdin closed. Don't you redirect stdin?");
+                let line = line.unwrap().expect("stdin closed. Don't you redirect stdin?");
                 if line.starts_with(COMMAND_PREFIX) {
                     if backup_command_re.is_match(line.strip_prefix(COMMAND_PREFIX).unwrap()) {
-                        self_stdout.write_flush(b"Backup started\n").await.expect("Failed to write to stdout");
-                        server_stdin.write_flush(b"save hold\nsave query\n").await.expect("Failed to write to server stdin");
+                        self_stdout.write_flush(b"Backup started\n").await.unwrap();
+                        server_stdin.write_flush(b"save hold\nsave query\n").await.unwrap();
 
                         server_stdout.next_line().await.expect("Failed to read from server stdout");
                         loop {
-                            let line = server_stdout.next_line().await
-                                .expect("Failed to read from server stdout")
-                                .expect("Server stdout closed");
+                            let line = server_stdout.next_line().await.unwrap().expect("Server stdout closed");
                             if ready_backups_re.is_match(&line) {
                                 break;
                             }
-                            self_stdout.writeln_flush(line.as_bytes()).await.expect("Failed to write to stdout");
-                            server_stdin.write_flush(b"save query\n").await.expect("Failed to write to server stdin");
+                            self_stdout.writeln_flush(line.as_bytes()).await.unwrap();
+                            server_stdin.write_flush(b"save query\n").await.unwrap();
                             sleep(time::Duration::from_millis(300)).await;
                         }
-                        let line = server_stdout.next_line().await
-                            .expect("Failed to read from server stdout")
-                            .expect("Server stdout closed");
+                        let line = server_stdout.next_line().await.unwrap().unwrap();
                         backuper.backup(line).await;
-                        server_stdin.write_flush(b"save resume\n").await.expect("Failed to write to server stdin");
+                        server_stdin.write_flush(b"save resume\n").await.unwrap();
 
-                        self_stdout.write_flush(b"Backup finished\n").await.expect("Failed to write to stdout");
+                        self_stdout.write_flush(b"Backup finished\n").await.unwrap();
 
                     } else {
-                        self_stdout.write_flush(b"Unknown command\n").await.expect("Failed to write to stdout");
+                        self_stdout.write_flush(b"Unknown command\n").await.unwrap();
                     }
                 } else if command_re.is_match(&line) {
                     // save command is not allowed
-                    self_stdout.write_flush(b"Don't use \"save xxxx\" command\n").await.expect("Failed to write to stdout");
+                    self_stdout.write_flush(b"Don't use \"save xxxx\" command\n").await.unwrap();
                 } else {
                     server_stdin.writeln_flush(line.as_bytes()).await.expect("Failed to write to server stdin");
                 }
             }
 
             _ = backup_interval.tick() => {
-                self_stdout.write_flush(b"Backup started\n").await.expect("Failed to write to stdout");
+                self_stdout.write_flush(b"Backup started\n").await.unwrap();
                 server_stdin.write_flush(b"save hold\nsave query\n").await.expect("Failed to write to server stdin");
 
-                server_stdout.next_line().await.expect("Failed to read from server stdout");
+                server_stdout.next_line().await.unwrap().expect("Failed to read from server stdout");
 
                 loop {
-                    let line = server_stdout.next_line().await
-                        .expect("Failed to read from server stdout")
-                        .expect("Server stdout closed");
+                    let line = server_stdout.next_line().await.unwrap().expect("Server stdout closed");
                     if ready_backups_re.is_match(&line) {
                         break;
                     }
-                    self_stdout.writeln_flush(line.as_bytes()).await.expect("Failed to write to stdout");
+                    self_stdout.writeln_flush(line.as_bytes()).await.unwrap();
 
                     server_stdin.write_flush(b"save query\n").await.expect("Failed to write to server stdin");
                 }
-                let line = server_stdout.next_line().await
-                    .expect("Failed to read from server stdout")
-                    .expect("Server stdout closed");
+                let line = server_stdout.next_line().await.unwrap().expect("Server stdout closed");
                 backuper.backup(line).await;
                 server_stdin.write_flush(b"save resume\n").await.expect("Failed to write to server stdin");
 
-                self_stdout.write_flush(b"Backup finished\n").await.expect("Failed to write to stdout");
+                self_stdout.write_flush(b"Backup finished\n").await.unwrap();
             }
 
         }
