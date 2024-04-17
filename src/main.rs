@@ -46,6 +46,11 @@ async fn main() {
         std::process::exit(1);
     }
 
+    if !cli.server_path.exists() || !cli.server_path.is_file() {
+        eprintln!("Server path does not exist");
+        std::process::exit(1);
+    }
+
     let mut child = Command::new(&cli.server_path)
         .env("LD_LIBRARY_PATH", cli.server_path.parent().unwrap())
         .args(cli.server_options)
