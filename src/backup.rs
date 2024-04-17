@@ -2,7 +2,6 @@ use chrono::{DateTime, Local};
 use regex::Regex;
 use std::path::PathBuf;
 use tokio::fs;
-use tokio_stream::{wrappers::ReadDirStream, StreamExt};
 
 pub struct Backuper {
     backup_folder: PathBuf,
@@ -45,15 +44,14 @@ impl Backuper {
     // Backup folder is like: ./backups/world_name/2021-08-01 12_34_56+0000
     pub(super) async fn backup(&self, file_paths: String) {
         let world_name = file_paths.split('/').next().unwrap();
-        let origin_world_folder = self.origin_folder.join(world_name);
         let backup_world_folder = self.backup_folder.join(world_name);
-        let mut t = ReadDirStream::new(fs::read_dir(origin_world_folder).await.unwrap());
+        let mut t = fs::read_dir(&backup_world_folder).await.unwrap();
         let mut v = Vec::new();
-        while let Some(entry) = t.next().await {
-            let entry = entry.unwrap();
+        while let Some(entry) = t.next_entry().await.unwrap() {
             if !entry.file_type().await.unwrap().is_dir() {
                 continue;
             }
+            eprintln!("Found directory: {:?}", entry.file_name());
             if let Ok(d) =
                 DateTime::parse_from_str(entry.file_name().to_str().unwrap(), "%F %H_%M_%S%.f %z")
             {
@@ -61,7 +59,9 @@ impl Backuper {
             }
         }
         v.sort_by_key(|(_, d)| *d);
+        eprintln!("Found {} directories", v.len());
         let ndel = v.len().saturating_sub(self.backup_count.saturating_sub(1));
+        eprintln!("Deleting {} directories", ndel);
         let mut tasks = Vec::new();
         for (entry, _) in v.into_iter().take(ndel) {
             tasks.push(tokio::spawn(async move {
