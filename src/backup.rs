@@ -51,7 +51,6 @@ impl Backuper {
             if !entry.file_type().await.unwrap().is_dir() {
                 continue;
             }
-            eprintln!("Found directory: {:?}", entry.file_name());
             if let Ok(d) =
                 DateTime::parse_from_str(entry.file_name().to_str().unwrap(), "%F %H_%M_%S%.f %z")
             {
@@ -59,9 +58,7 @@ impl Backuper {
             }
         }
         v.sort_by_key(|(_, d)| *d);
-        eprintln!("Found {} directories", v.len());
         let ndel = v.len().saturating_sub(self.backup_count.saturating_sub(1));
-        eprintln!("Deleting {} directories", ndel);
         let mut tasks = Vec::new();
         for (entry, _) in v.into_iter().take(ndel) {
             tasks.push(tokio::spawn(async move {
