@@ -21,7 +21,7 @@ minecraft-server-wrapper --server-path <サーバーのパス> --backup-folder <
 
 `--server-path` はサーバーのパスを指定します。指定しなかったっ場合は`./bedrock_server`が使われます。  
 `--backup-folder` はバックアップを保存するディレクトリのパスを指定します。指定しなかった場合は`./backups`が使われます。  
-`--backup-interval` はバックアップを取る間隔を指定します。指定しなかった場合はバックアップは取られません。  
+`--backup-interval` はバックアップを取る間隔を指定します。指定しなかった場合はバックアップは取られません。`1h 30m` `30m` `10s`のように指定します。詳しくは[chronoのドキュメント](https://docs.rs/humantime/latest/humantime/fn.parse_duration.html)を参照してください。  
 `--backup-count` はバックアップを保持する数を指定します。指定しなかった場合は直近のバックアップのみが残ります。  
 `--` 以降にはサーバーの起動オプションを指定します。例えば、`-- --port 19132`のように指定します。
 
