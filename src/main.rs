@@ -131,7 +131,7 @@ async fn main() {
                         server_stdin.write_all(b"save resume\n").await.expect("Failed to write to server stdin");
                         server_stdin.flush().await.expect("Failed to flush server stdin");
 
-                        self_stdout.write_all(b"Backup finished").await.expect("Failed to write to stdout");
+                        self_stdout.write_all(b"Backup finished\n").await.expect("Failed to write to stdout");
                         self_stdout.flush().await.expect("Failed to flush stdout");
 
                     } else {
