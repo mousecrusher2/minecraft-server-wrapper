@@ -45,6 +45,13 @@ impl Backuper {
     pub(super) async fn backup(&self, file_paths: String) {
         let world_name = file_paths.split('/').next().unwrap();
         let backup_world_folder = self.backup_folder.join(world_name);
+        fs::create_dir(&backup_world_folder)
+            .await
+            .or_else(|e| match e.kind() {
+                std::io::ErrorKind::AlreadyExists => Ok(()),
+                _ => Err(e),
+            })
+            .expect("Unknown error occurred while creating backup folder");
         let mut t = fs::read_dir(&backup_world_folder).await.unwrap();
         let mut v = Vec::new();
         while let Some(entry) = t.next_entry().await.unwrap() {
