@@ -1,13 +1,15 @@
 use chrono::{DateTime, Local};
 use regex::Regex;
-use std::path::PathBuf;
-use tokio::fs;
+use std::{path::PathBuf, sync::Arc};
+use tokio::{fs, io::AsyncWriteExt, sync::Semaphore};
 
 pub struct Backuper {
     backup_folder: PathBuf,
     origin_folder: PathBuf,
     backup_count: usize,
 }
+
+const PARALLEL_LIMIT: usize = 100;
 
 impl Backuper {
     pub(super) fn new(backup_folder: PathBuf, origin_folder: PathBuf, backup_count: usize) -> Self {
@@ -84,20 +86,24 @@ impl Backuper {
             let origin_path = self.origin_folder.join(&path);
             let target_path = target_backup_folder.join(&path);
             tasks.push(tokio::spawn(async move {
+                static SEMAPHORE: Semaphore = Semaphore::const_new(PARALLEL_LIMIT);
+                let _permit = SEMAPHORE
+                    .acquire()
+                    .await
+                    .expect("Failed to acquire semaphore");
                 fs::create_dir_all(target_path.parent().unwrap())
                     .await
                     .expect("Failed to create parent directories");
                 fs::copy(origin_path, &target_path)
                     .await
                     .expect("Failed to copy file");
-                fs::OpenOptions::new()
+                let mut f = fs::OpenOptions::new()
                     .write(true)
                     .open(target_path)
                     .await
-                    .expect("Failed to open file")
-                    .set_len(size)
-                    .await
-                    .expect("Failed to set file size");
+                    .expect("Failed to open file");
+                f.set_len(size).await.expect("Failed to set file size");
+                f.flush().await.expect("Failed to flush file");
             }));
         }
         for task in tasks {

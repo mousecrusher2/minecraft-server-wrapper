@@ -21,6 +21,7 @@ tokio = { version = "1.37.0", features = [
     "io-util",
     "fs",
     "time",
+    "sync",
 ] }
 
 [profile.release]
