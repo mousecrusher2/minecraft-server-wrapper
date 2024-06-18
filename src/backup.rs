@@ -1,7 +1,12 @@
 use chrono::{DateTime, Local};
+use futures::{
+    future::FutureExt,
+    stream::{self, StreamExt},
+};
 use regex::Regex;
-use std::{path::PathBuf, sync::Arc};
-use tokio::{fs, io::AsyncWriteExt, sync::Semaphore};
+use std::path::PathBuf;
+use tokio::{fs, io::AsyncWriteExt};
+use tokio_stream::wrappers::ReadDirStream;
 
 pub struct Backuper {
     backup_folder: PathBuf,
@@ -54,60 +59,54 @@ impl Backuper {
                 _ => Err(e),
             })
             .expect("Unknown error occurred while creating backup folder");
-        let mut t = fs::read_dir(&backup_world_folder).await.unwrap();
-        let mut v = Vec::new();
-        while let Some(entry) = t.next_entry().await.unwrap() {
-            if !entry.file_type().await.unwrap().is_dir() {
-                continue;
-            }
-            if let Ok(d) =
-                DateTime::parse_from_str(entry.file_name().to_str().unwrap(), "%F %H_%M_%S%.f %z")
-            {
-                v.push((entry, d));
-            }
-        }
-        v.sort_by_key(|(_, d)| *d);
-        let ndel = v.len().saturating_sub(self.backup_count.saturating_sub(1));
-        let mut tasks = Vec::new();
-        for (entry, _) in v.into_iter().take(ndel) {
-            tasks.push(tokio::spawn(async move {
-                fs::remove_dir_all(entry.path())
-                    .await
-                    .expect("Failed to remove directory");
-            }));
-        }
+        let task1 = ReadDirStream::new(fs::read_dir(&backup_world_folder).await.unwrap())
+            .filter_map(|entry| async move {
+                let entry = entry.unwrap();
+                if !entry.file_type().await.unwrap().is_dir() {
+                    return None;
+                }
+                let d = DateTime::parse_from_str(
+                    entry.file_name().to_str().unwrap(),
+                    "%F %H_%M_%S%.f %z",
+                )
+                .ok()?;
+                Some((entry, d))
+            })
+            .collect::<Vec<_>>()
+            .then(|mut v| {
+                v.sort_by_key(|(_, d)| *d);
+                let ndel = v.len().saturating_sub(self.backup_count.saturating_sub(1));
+                stream::iter(v)
+                    .take(ndel)
+                    .for_each_concurrent(None, |(entry, _)| async move {
+                        fs::remove_dir_all(entry.path())
+                            .await
+                            .expect("Failed to remove directory");
+                    })
+            });
         let target_backup_folder =
             backup_world_folder.join(Local::now().format("%F %H_%M_%S%.f %z").to_string());
-        fs::create_dir_all(&target_backup_folder)
-            .await
-            .expect("Failed to create backup directory");
         let files = self.parse_backup_files(file_paths);
-        for (path, size) in files {
-            let origin_path = self.origin_folder.join(&path);
-            let target_path = target_backup_folder.join(&path);
-            tasks.push(tokio::spawn(async move {
-                static SEMAPHORE: Semaphore = Semaphore::const_new(PARALLEL_LIMIT);
-                let _permit = SEMAPHORE
-                    .acquire()
-                    .await
-                    .expect("Failed to acquire semaphore");
-                fs::create_dir_all(target_path.parent().unwrap())
-                    .await
-                    .expect("Failed to create parent directories");
-                fs::copy(origin_path, &target_path)
-                    .await
-                    .expect("Failed to copy file");
-                let mut f = fs::OpenOptions::new()
-                    .write(true)
-                    .open(target_path)
-                    .await
-                    .expect("Failed to open file");
-                f.set_len(size).await.expect("Failed to set file size");
-                f.flush().await.expect("Failed to flush file");
-            }));
-        }
-        for task in tasks {
-            task.await.expect("Failed to wait for task");
-        }
+        let task2 = fs::create_dir_all(&target_backup_folder).then(|r| {
+            r.expect("Failed to create backup folder");
+            stream::iter(files).for_each_concurrent(PARALLEL_LIMIT, |(path, size)| {
+                let origin_path = self.origin_folder.join(&path);
+                let target_path = target_backup_folder.join(&path);
+                async move {
+                    fs::create_dir_all(target_path.parent().unwrap())
+                        .await
+                        .unwrap();
+                    fs::copy(origin_path, &target_path).await.unwrap();
+                    let mut f = fs::OpenOptions::new()
+                        .write(true)
+                        .open(target_path)
+                        .await
+                        .expect("Failed to open file");
+                    f.set_len(size).await.expect("Failed to set file size");
+                    f.flush().await.expect("Failed to flush file");
+                }
+            })
+        });
+        tokio::join!(task1, task2);
     }
 }

@@ -11,6 +11,7 @@ description = "A simple wrapper for running a Minecraft bedrock server and backu
 [dependencies]
 chrono = { version = "0.4.38", default-features = false, features = ["clock"] }
 clap = { version = "4.5.4", features = ["derive"] }
+futures = { version = "0.3.30", default-features = false, features = ["alloc"] }
 humantime = "2.1.0"
 regex = "1.10.4"
 tokio = { version = "1.37.0", features = [
@@ -22,6 +23,9 @@ tokio = { version = "1.37.0", features = [
     "fs",
     "time",
     "sync",
+] }
+tokio-stream = { version = "0.1.15", default-features = false, features = [
+    "fs",
 ] }
 
 [profile.release]
