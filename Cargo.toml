@@ -14,7 +14,7 @@ clap = { version = "4.5.4", features = ["derive"] }
 futures = { version = "0.3.30", default-features = false, features = ["alloc"] }
 humantime = "2.1.0"
 regex = "1.10.4"
-tokio = { version = "1.37.0", features = [
+tokio = { version = "1.38.2", features = [
     "macros",
     "process",
     "rt",
